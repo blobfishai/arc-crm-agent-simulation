@@ -1,0 +1,24 @@
+HubBench engine
+Copyright (c) 2026 BlobfishAI
+
+The engine under benchmark/hubbench/engine/ is a domain-agnostic port of the
+FactoryBench-100 engine (https://github.com/blobfishai/factory-agent-simulation,
+Apache License 2.0, Copyright (c) 2026 BlobfishAI).  The following pieces were
+vendored and adapted:
+
+  - the deterministic, contract-driven verifier (required investigations,
+    post-write readbacks, payload assertions, milestone aggregation)
+  - the negative-control policy set (noop, shortcut, state_only, incomplete_read,
+    write_before_read, missing_readback, unauthorized_write, wrong_value,
+    wrong_decision, wrong_evidence), mutation-omission proof, and determinism replay
+  - the stdio JSON-RPC MCP server shape (initialize / tools/list / tools/call /
+    resources / prompts)
+  - the plan / quantity / schedule decision-model bundles (calculation ids that the
+    reasoning-chain audit keys on) and the dependency-free XLSX / PDF writers
+
+The ERP-specific world (Oracle Fusion fixtures, Google Workspace and Slack
+contracts) was not vendored; HubBench worlds are real SQLite tables behind
+provider-shaped tools defined per family.
+
+All HubBench family data is clean-room synthetic.  No real patient, employee,
+supplier, or organisation is represented.

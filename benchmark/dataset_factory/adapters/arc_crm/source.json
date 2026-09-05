@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "adapter": "blobfish-arc-crm",
+  "adapter_version": "0.1.0",
+  "seed": 8210601,
+  "source": {
+    "provider": "huggingface",
+    "id": "Arc-Intelligence/arc-crm-benchmark",
+    "revision": "8efb61f5920812d03d6267ed25f4439acb82cfbf",
+    "observed_on": "2026-09-05",
+    "access": {"private": false, "gated": false, "disabled": false},
+    "dataset_card_license": "mit",
+    "files": [
+      {"path": "README.md", "sha256": "3018f657da575cdf3f850c1e6359ca97621d7cc47464e145f660082a46993f9a"},
+      {"path": "data/train-00000-of-00001.parquet", "bytes": 11173259, "sha256": "270839627073af3b446288cf9ba2c4f58319f402d8607bdeb1cb97b361dab245"}
+    ],
+    "review": {"rows_inspected": 1200, "turns_inspected": 5916, "distinct_expected_tools": 27, "populated_final_states": 0, "flagged_failure_rows": 0}
+  },
+  "authorship": "Clean-room synthetic workflows and fixtures. No upstream conversations, code, or initial entities are redistributed or executed. Provider semantics, permissions, final-state checks, and failure controls are independently authored by BlobfishAI.",
+  "coverage": {
+    "synthetic_tasks": 6,
+    "source_rows_reproduced": 0,
+    "workflows": ["contact_onboarding", "stage_correction", "bounded_quote", "quote_replacement", "unsigned_contract", "corrected_document_link"],
+    "upstream_api_parity": false,
+    "exclusions": ["Not a reproduction of all 1200 conversations", "Not all 27 upstream tool names", "No upstream-code license claim", "No external CRM, email, signature, document fetch, or model call", "No model leaderboard result established by oracle qualification", "No admission into the published HubBench v1.4.0 distribution"]
+  }
+}
