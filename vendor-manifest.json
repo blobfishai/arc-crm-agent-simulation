@@ -1,0 +1,152 @@
+{
+  "files": [
+    {
+      "bytes": 84,
+      "git_blob": "cd27f6cbef4bc6e76d10d66dab6718f4455c5840",
+      "path": "benchmark/dataset_factory/adapters/__init__.py",
+      "sha256": "9fb03d85f9ecb4d53a5613bac5b53ba0ff5f1a5a333944a75c491cbf383ae82e"
+    },
+    {
+      "bytes": 5327,
+      "git_blob": "1ebb25545b2c4e8f54e746e557031672f752c544",
+      "path": "benchmark/dataset_factory/adapters/arc_crm/README.md",
+      "sha256": "8a17c0f090f3e08f7df950a1bccf27980225583a9010fb0f7e50f6b4546539a2"
+    },
+    {
+      "bytes": 1042,
+      "git_blob": "edcafde559925192c62e3cf8768bebf38e5994fc",
+      "path": "benchmark/dataset_factory/adapters/arc_crm/__init__.py",
+      "sha256": "b25493e8da177658854a76c946a2ea897abbf646310c6486f45ef532f922370d"
+    },
+    {
+      "bytes": 8265,
+      "git_blob": "02b0ffa76fc90e2edeea8b6121af26cb8fd7480a",
+      "path": "benchmark/dataset_factory/adapters/arc_crm/qualification.py",
+      "sha256": "43dd3d60c85b41208e179564850c3d9b51dbdfe8c1c77829bd50e01bc076f7b4"
+    },
+    {
+      "bytes": 7608,
+      "git_blob": "297b514e6ba5df5a8f26d47e7bf93891c8417024",
+      "path": "benchmark/dataset_factory/adapters/arc_crm/release.py",
+      "sha256": "1f8cf0190b7bdb7074aa1a6d04be8d8184930b8e8678ce068d7903451fb8498d"
+    },
+    {
+      "bytes": 7955,
+      "git_blob": "f1d0a085025455f79f9a8bab11447fb2bf2cbf23",
+      "path": "benchmark/dataset_factory/adapters/arc_crm/runtime.py",
+      "sha256": "c69f9d3b99f78d8c68cf1a03b9b984a1ea2bd7cfdd2358ac86fbc327fabde956"
+    },
+    {
+      "bytes": 4999,
+      "git_blob": "04194b66131c746ac257f3627cdc92f4ecf39cc9",
+      "path": "benchmark/dataset_factory/adapters/arc_crm/schema.sql",
+      "sha256": "9dfd94d5c745a99d1d4db3a1f82ea76c475ce73e4a491d1b4cd898a90e12ca88"
+    },
+    {
+      "bytes": 1691,
+      "git_blob": "198c79b1256ad7156891118e672e603619a889db",
+      "path": "benchmark/dataset_factory/adapters/arc_crm/source.json",
+      "sha256": "c6df0a5003573929abf0a1a8ebf5d9f9118d30da5a1de65f7aae3c5220d62ab8"
+    },
+    {
+      "bytes": 51506,
+      "git_blob": "235da9484a6786508e8066030c28145370bd279e",
+      "path": "benchmark/dataset_factory/adapters/arc_crm/tasks.py",
+      "sha256": "ceca16a6a3b8a26f9dad5edfa6f6d9252c918abcc49cb12260c11dd6d1b6968d"
+    },
+    {
+      "bytes": 26044,
+      "git_blob": "da3a7d0397b0e424d9f46fbe40fde97cfa7cec5e",
+      "path": "benchmark/dataset_factory/adapters/arc_crm/tools.py",
+      "sha256": "2f0ff11cadd9995b64090cc41cac372acf926348641c6dcc318400d2e07f0681"
+    },
+    {
+      "bytes": 15987,
+      "git_blob": "0d9a441908acc11614cd30e1575dd7d7121585c3",
+      "path": "benchmark/dataset_factory/tests/test_arc_crm.py",
+      "sha256": "abec8d957498e1dad834716a05ef2cea7e9ea60666475963459789d7aec78c6a"
+    },
+    {
+      "bytes": 11530,
+      "git_blob": "799417856bd7a992fb4b66939a81db865f8d976e",
+      "path": "benchmark/dataset_factory/tests/test_arc_crm_surfaces.py",
+      "sha256": "040a2688c51150e93b26bc43a5ce3fbbe82d79a49fa0f8e4d95c5deb475e70e9"
+    },
+    {
+      "bytes": 1272,
+      "git_blob": "964cf6ebd948a6dec8951bddfa869a4953eeb9f3",
+      "path": "benchmark/hubbench/NOTICE",
+      "sha256": "0439810b94667a0837215746a0416415da142c9e2dab33542d218ca4fd4bc359"
+    },
+    {
+      "bytes": 90,
+      "git_blob": "a0d6a25ed5eb55de6def35d7e0c43d306b8957ec",
+      "path": "benchmark/hubbench/engine/__init__.py",
+      "sha256": "47457b6528aa4cd79d66d63ad4c9b588865f1ab834f241caa7d8be4cd9da71af"
+    },
+    {
+      "bytes": 9606,
+      "git_blob": "394148723895095ad5bc63049e61826e1473e20c",
+      "path": "benchmark/hubbench/engine/assets.py",
+      "sha256": "68e96602f0f1e72aa82dc1b790ff3333d3d04381753a6ff8685d56ee7dfe0201"
+    },
+    {
+      "bytes": 6935,
+      "git_blob": "74196696008b1cb143be1dd99783548b8a6544ae",
+      "path": "benchmark/hubbench/engine/cli.py",
+      "sha256": "f9566f34bbdbe8a54b4f04cbdd1e3f4188f4fabae2bc1c7b61f59da7c91b1230"
+    },
+    {
+      "bytes": 1677,
+      "git_blob": "ca383bbbede63b76a7215ff73d500986042e41ee",
+      "path": "benchmark/hubbench/engine/core.sql",
+      "sha256": "87c0f58481316ed9fd37a3ac206a3772fbaecd467738449d5715ebda764f287b"
+    },
+    {
+      "bytes": 5413,
+      "git_blob": "ff3214de1df0e9f02b2c3f4d04ccbbb35750a64b",
+      "path": "benchmark/hubbench/engine/families.py",
+      "sha256": "e2b599aea653e077406a72a32ffaa374bd247cc0f669192011c580c920601326"
+    },
+    {
+      "bytes": 53826,
+      "git_blob": "b6d1d7470c4798ff1a007267c3f7cdebd5b68416",
+      "path": "benchmark/hubbench/engine/http.py",
+      "sha256": "65382d2248886e3723e704b96247aa68eca20495303ae0f5c3281de546020a4b"
+    },
+    {
+      "bytes": 8927,
+      "git_blob": "3d158dca97933f53dd3220ae06b2c9984787e90f",
+      "path": "benchmark/hubbench/engine/server.py",
+      "sha256": "783384f076354f777443e65754295ce1a464db5698f617c04ddabe83b82da797"
+    },
+    {
+      "bytes": 1694,
+      "git_blob": "a00965da2c7d71dd67b4a3745551d2c83392614e",
+      "path": "benchmark/hubbench/engine/tasks.py",
+      "sha256": "a6782a58d88addc593cfc28dbf3193a4ab72988bf29caf14fa6bac982d0070d8"
+    },
+    {
+      "bytes": 4414,
+      "git_blob": "178a5f90f3bb450a91cfe20d57fa2e52c5ddd32c",
+      "path": "benchmark/hubbench/engine/validation.py",
+      "sha256": "9893d03ead209dd33a379993a2b93916bc9e1e0d830c957c37780e08d98400db"
+    },
+    {
+      "bytes": 20968,
+      "git_blob": "ae17739ee5fac4489fe1d599652bfdd52aac95ce",
+      "path": "benchmark/hubbench/engine/verifier.py",
+      "sha256": "12947c2d3e0a004dedc4c8191c2ec1d63093adfdfa7f26f5c0e1285bac24600c"
+    },
+    {
+      "bytes": 16232,
+      "git_blob": "d44a3c910d7b61a256dabb9321fe57471f41137d",
+      "path": "benchmark/hubbench/engine/world.py",
+      "sha256": "7e50b1f3330a9cd738964468f2b149230ff27db83cf3080fe7b03dd0fe1d2075"
+    }
+  ],
+  "method": "byte-identical first-party vendoring; no Arc upstream code or source conversations",
+  "schema_version": 1,
+  "source_commit": "a40865c97a5f0e0ba39c8e84a98cf1d448546b1f",
+  "source_repository": "https://github.com/blobfishai/blobfishai"
+}
