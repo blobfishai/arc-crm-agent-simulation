@@ -16,13 +16,14 @@ from pathlib import Path
 from benchmark.dataset_factory.adapters.arc_crm import FAMILY, SOURCE_LOCK, build_tasks
 from benchmark.dataset_factory.adapters.arc_crm.qualification import digest, qualify
 from benchmark.dataset_factory.adapters.arc_crm.release import public_task
-from benchmark.hubbench.engine.assets import asset_bytes
 from benchmark.hubbench.engine.families import public_tool_definitions
 from benchmark.hubbench.engine.validation import canonical_json
 
+from .assets import asset_bytes, public_assets, verify_asset
+
 ROOT = Path(__file__).resolve().parents[1]
 DATASET = "blobfishai/arc-crm-6"
-VERSION = "0.1.1"
+VERSION = "0.1.2"
 BASE_IMAGE = "python:3.12-slim@sha256:7a8b475003c4fe15a2cd4e55e5cfc2f3560bdc9333d624f24cdd6d4340fd7a17"
 ENGINE = "benchmark/hubbench/engine"
 MARKERS = [f"{ENGINE}/__init__.py"]
@@ -97,7 +98,7 @@ def source_identity(*, require_clean=False):
         raise ValueError("publication freeze requires an exact clean source commit")
     # Including actual code bytes keeps dirty local experiments distinguishable.
     paths = sorted(
-        [*MARKERS, *[f"{ENGINE}/{name}" for name in set(WORLD_ENGINE + VERIFIER_ENGINE)],
+        [*MARKERS, f"{ENGINE}/assets.py", *[f"{ENGINE}/{name}" for name in set(WORLD_ENGINE + VERIFIER_ENGINE)],
          *[path.relative_to(ROOT).as_posix() for path in (ROOT / "arc_release").glob("*.py")],
          *[path.relative_to(ROOT).as_posix() for path in (ROOT / "benchmark/dataset_factory/adapters/arc_crm").iterdir()
            if path.is_file() and path.suffix in {".py", ".json", ".sql"}]]
@@ -333,7 +334,8 @@ def freeze(output: Path, *, require_clean=False):
     for task, qualification in zip(tasks, report["tasks"], strict=True):
         task_id = task["task_id"]
         prefix = f"harbor/tasks/{task_id}"
-        public = public_task(task)
+        rendered = {asset["path"]: asset_bytes(asset) for asset in task["assets"]}
+        public = public_task(task) | {"assets": public_assets(task["assets"], rendered)}
         world = public | {"seed_tables": task["seed_tables"]}
         sealed = {key: task[key] for key in SEALED_KEYS}
         identity = {
@@ -357,7 +359,7 @@ def freeze(output: Path, *, require_clean=False):
             safe_relative(asset["path"])
             if not asset["path"].startswith("assets/"):
                 raise ValueError("evidence must stay inside the public assets directory")
-            raw = asset_bytes(asset)
+            raw = rendered[asset["path"]]
             write(f"{prefix}/environment/public/{asset['path']}", raw)
             write(f"tasks/{task_id}/{asset['path']}", raw)
         copy(f"{prefix}/environment/world/world.py", "arc_release/world.py")
@@ -574,6 +576,18 @@ def verify_freeze(output: Path):
             raise ValueError("Harbor task content changed")
         if config["task"]["name"] != reference["name"] or config["task"]["version"] != version:
             raise ValueError("Harbor task identity changed")
+        if int(version.rsplit(".", 1)[1]) >= 2:
+            public = json.loads((task / "environment/public/task.json").read_text())
+            world = json.loads((task / "environment/world/task.json").read_text())
+            projected = json.loads((output / "tasks" / task.name / "task.json").read_text())
+            if public != projected or public["assets"] != world["assets"]:
+                raise ValueError("public asset projections differ")
+            evidence = {row["asset_id"]: row["content"] for row in world["seed_tables"]["crm_evidence"]}
+            for asset in public["assets"]:
+                raw = (task / "environment/public" / safe_relative(asset["path"])).read_bytes()
+                verify_asset(asset, raw, evidence[asset["asset_id"]])
+                if (output / "tasks" / task.name / safe_relative(asset["path"])).read_bytes() != raw:
+                    raise ValueError("asset binary projections differ")
     return manifest
 
 

@@ -11,9 +11,12 @@ state through 31 CRM/evidence contracts on three mock servers, plus two engine
 controls. All CLI, HTML-form, REST and MCP calls execute the same tools.
 
 This repository contains the tested **local authoring runtime** and an isolated
-package exporter. Harbor v0.1.0 was published but failed registry execution;
-it is not an execution-qualified release. Hugging Face publication is not yet
-claimed. No source
+package exporter. Harbor v0.1.0 failed registry execution. Version 0.1.1 passed
+both six-task Docker runs and was published on
+[Hugging Face](https://huggingface.co/datasets/SamuelChien821/arc-crm-6/tree/a1de6b0c9748adccbfc0a96110f998a974cb4708),
+but nine native PDFs truncate long source-text lines. Its runtime qualification
+does not establish native-document completeness. Version 0.1.2 fixes the exporter;
+its new clean Docker/publication receipts are still required. No source
 conversation or code was copied from Arc; all task fixtures and final-state
 checks are independently authored. The reviewed source has 1,200 conversations
 and 27 tool names; this version reproduces zero source rows and covers only the
@@ -51,7 +54,7 @@ cleared before fresh grading. Admission requires successful stop/collection
 markers, service provenance, exact bundle hashes and independently regrades the
 saved snapshot. The reference solution is uploaded only for oracle runs.
 
-Package version 0.1.1 uses a distinct SHA256-named input archive for each image
+Package versions 0.1.1+ use a distinct SHA256-named input archive for each image
 and verifies it before extraction. This prevents same-named, equal-sized metadata
 from silently being reused across build contexts with normalized timestamps.
 Inspectable projections remain in the package; the agent archive contains only
@@ -59,6 +62,23 @@ its public closure. The vendored authoring contract remains at version 0.1.0.
 Historical package tags, freezes and failed-job evidence are preserved. See the
 [registry incident](diagnostics/registry-v0.1.0.md); fresh local and registry jobs
 are required for every new set of package bytes.
+
+Version 0.1.2 wraps and paginates the complete evidence text in native PDFs.
+Independent PDF extraction tests compare every character except layout whitespace,
+including long policy lines and document details. Unsupported non-ASCII content
+is rejected rather than silently replaced. The vendored authoring writer remains
+unchanged; use the isolated package exporter for corrected release files.
+
+Asset metadata distinguishes `content_sha256` (the full UTF-8 evidence text;
+legacy `sha256` has this same meaning) from `file_sha256` / `file_bytes` (the actual
+PDF/XLSX/EML download). Frozen verification checks both representations. The
+[asset incident](diagnostics/native-assets-v0.1.1.md) preserves the earlier facts.
+
+HF patch publication requires `--previous-publication` and `--previous-receipt`.
+It verifies every old object at the recorded commit before writing, updates only
+from that exact HEAD in one explicit commit using `parent_commit`, and verifies the old immutable objects
+again afterward. Only explicitly identified obsolete package paths are removed
+from the new commit; the previous commit and release evidence remain accessible.
 
 Each local Docker trial uses an internal-only network, a 1 CPU/1 GiB main
 container and a 0.5 CPU/512 MiB world container with PID limits, followed by a
@@ -87,7 +107,7 @@ The CLI uses that same served world:
 python3.12 -m benchmark.dataset_factory.adapters.arc_crm.runtime tool \
   --url http://127.0.0.1:8766 hubbench.context.get '{}'
 python3.12 -m benchmark.dataset_factory.adapters.arc_crm.release qualify
-uv run --no-project --python 3.12 --with pytest python -m pytest -q
+uv run --no-project --python 3.12 --with pytest --with pypdf --with huggingface-hub python -m pytest -q
 ```
 
 See the [adapter guide](benchmark/dataset_factory/adapters/arc_crm/README.md)
