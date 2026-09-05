@@ -10,12 +10,53 @@ drafting, and corrected document association. They share persistent SQLite
 state through 31 CRM/evidence contracts on three mock servers, plus two engine
 controls. All CLI, HTML-form, REST and MCP calls execute the same tools.
 
-This repository contains the tested **local authoring runtime**. Isolated Docker
-packages and Hugging Face/Harbor publication are not yet claimed. No source
+This repository contains the tested **local authoring runtime** and an isolated
+package exporter. Hugging Face/Harbor publication is not yet claimed. No source
 conversation or code was copied from Arc; all task fixtures and final-state
 checks are independently authored. The reviewed source has 1,200 conversations
 and 27 tool names; this version reproduces zero source rows and covers only the
 six listed workflows.
+
+## Isolated packages
+
+`arc_release` exports six self-contained Harbor tasks without changing the
+vendored authoring implementation. Use a new destination for every freeze:
+
+```sh
+python3.12 -m arc_release.build freeze /tmp/arc-crm-packages
+python3.12 -m arc_release.build verify /tmp/arc-crm-packages
+harbor run -p /tmp/arc-crm-packages/harbor/tasks -a oracle -e docker -n 1 -k 1 -r 0
+```
+
+Add `--require-clean` to `freeze` for a release candidate tied to a clean source
+commit. Dirty development exports are labeled and cannot establish publication.
+The immutable file manifest, six task digests and installed-Harbor hash
+cross-check bind the exported inputs. A completed Harbor command or reward of
+1 alone is not a qualification receipt: require every oracle's successful exit,
+strict verifier verdict, canonical trace/state and frozen task identity.
+
+The agent image contains only a stdlib remote client, public schemas and evidence.
+An isolated world container has the seed state and handlers, but no task builder
+or verifier. The agent UID is 10001; startup checks denied runtime paths,
+private API access and external networking under that UID. A random per-episode
+collection credential stays exclusively in the world container.
+
+Harbor stops the agent before the world-side collection hook serializes a
+consistent SQLite snapshot. It then destroys the agent environment and builds
+a separate verifier from `tests/`, with networking disabled and no agent running
+beside it. Host log mounts are not a security boundary: prior reward files are
+cleared before fresh grading. Admission requires successful stop/collection
+markers, service provenance, exact bundle hashes and independently regrades the
+saved snapshot. The reference solution is uploaded only for oracle runs.
+
+Each local Docker trial uses an internal-only network, a 1 CPU/1 GiB main
+container and a 0.5 CPU/512 MiB world container with PID limits, followed by a
+separate 1 CPU/1 GiB verifier. The guard checks actual cgroup-v2 limits. Docker does not
+enforce Harbor's declared storage budget. No paid model, cloud deployment or
+runtime dependency installation is needed. Model runners requiring installation
+or provider egress need a separately reviewed runner configuration; this release
+does not claim to have run them. Harbor's default cleanup removes its own trial
+containers, networks and volumes, not source releases or other world data.
 
 ## Run
 
