@@ -108,6 +108,13 @@ preview rows), `evidence/` (collected snapshots and oracle traces) and separate
 registry receipts. The frozen candidate labels are immutable historical inputs;
 the external publication receipts describe the later qualification stages.
 
+Asset `file_sha256` / `file_bytes` bind the native PDF/XLSX/EML download.
+`content_sha256` and legacy `sha256` instead bind the full UTF-8 evidence text.
+Native PDFs wrap and paginate without clipping; independent extraction tests
+cover every PDF, and frozen admission checks complete-text rendering.
+Version 0.1.1 passed runtime oracles but truncated nine PDF files; its immutable
+commit and receipts remain historical evidence, not this corrected release.
+
 ## Isolation and grading
 
 Harbor 0.21.0 and Docker are required. The non-root UID10001 agent has only public
