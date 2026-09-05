@@ -52,7 +52,7 @@ def test_package_has_three_minimal_separate_inputs(frozen, number, tmp_path):
     assert "boundary.py health" in config["environment"]["healthcheck"]["command"]
     dockerfile = (root / "environment/Dockerfile").read_text()
     assert "COPY world" not in dockerfile and "COPY tests" not in dockerfile and "COPY solution" not in dockerfile
-    assert "COPY client/" in dockerfile and "COPY public/" in dockerfile
+    assert "COPY inputs-" in dockerfile and "sha256sum --check --strict" in dockerfile
     compose = (root / "environment/docker-compose.yaml").read_text()
     assert "internal: true" in compose and "ports:" not in compose and "external:" not in compose
     assert "cpus: 0.5" in compose and "mem_limit: 512m" in compose and "pids_limit: 128" in compose

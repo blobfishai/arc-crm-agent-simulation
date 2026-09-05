@@ -10,7 +10,7 @@ import sys
 import tomllib
 from pathlib import Path
 
-from .build import DATASET, VERSION, content_hash, json_bytes, sha, verify_freeze
+from .build import DATASET, content_hash, json_bytes, sha, verify_freeze
 from .verify import encoded
 
 
@@ -121,7 +121,7 @@ def admit(frozen: Path, job: Path, *, registry=False, allow_dirty=False):
         require(wanted_digest == expected[name]["digest"], "frozen task digest changed")
         require(trial_lock.get("schema_version") == 2, "unsupported trial lock")
         bound = trial_lock["task"]
-        require(bound.get("digest") == wanted_digest and bound.get("version") == VERSION, "trial task digest/version differs")
+        require(bound.get("digest") == wanted_digest and bound.get("version") == manifest["version"], "trial task digest/version differs")
         require(bound.get("name") == (name if registry else task_id), "trial lock name mismatch")
         require(trial.get("source") == (DATASET if registry else "tasks"), "trial source mismatch")
         if registry:
@@ -192,7 +192,7 @@ def admit(frozen: Path, job: Path, *, registry=False, allow_dirty=False):
     require(seen == set(expected), "missing tasks")
     require(sorted(map(encoded, embedded)) == sorted(map(encoded, trial_locks)), "job lock does not match trial locks")
     return {
-        "schema_version": 1, "dataset": DATASET, "version": VERSION, "qualified": True,
+        "schema_version": 1, "dataset": DATASET, "version": manifest["version"], "qualified": True,
         "scope": "all-six registry Docker oracles" if registry else "all-six local Docker oracles",
         "release_qualification": not manifest["source"]["dirty"], "model_evaluated": False,
         "source_commit": manifest["source"]["commit"], "source_dirty": manifest["source"]["dirty"],

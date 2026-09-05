@@ -11,7 +11,9 @@ state through 31 CRM/evidence contracts on three mock servers, plus two engine
 controls. All CLI, HTML-form, REST and MCP calls execute the same tools.
 
 This repository contains the tested **local authoring runtime** and an isolated
-package exporter. Hugging Face/Harbor publication is not yet claimed. No source
+package exporter. Harbor v0.1.0 was published but failed registry execution;
+it is not an execution-qualified release. Hugging Face publication is not yet
+claimed. No source
 conversation or code was copied from Arc; all task fixtures and final-state
 checks are independently authored. The reviewed source has 1,200 conversations
 and 27 tool names; this version reproduces zero source rows and covers only the
@@ -48,6 +50,15 @@ beside it. Host log mounts are not a security boundary: prior reward files are
 cleared before fresh grading. Admission requires successful stop/collection
 markers, service provenance, exact bundle hashes and independently regrades the
 saved snapshot. The reference solution is uploaded only for oracle runs.
+
+Package version 0.1.1 uses a distinct SHA256-named input archive for each image
+and verifies it before extraction. This prevents same-named, equal-sized metadata
+from silently being reused across build contexts with normalized timestamps.
+Inspectable projections remain in the package; the agent archive contains only
+its public closure. The vendored authoring contract remains at version 0.1.0.
+Historical package tags, freezes and failed-job evidence are preserved. See the
+[registry incident](diagnostics/registry-v0.1.0.md); fresh local and registry jobs
+are required for every new set of package bytes.
 
 Each local Docker trial uses an internal-only network, a 1 CPU/1 GiB main
 container and a 0.5 CPU/512 MiB world container with PID limits, followed by a

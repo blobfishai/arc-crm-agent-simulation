@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
+import os
 import re
 import subprocess
+import tarfile
 import tomllib
 from pathlib import Path
 
@@ -19,7 +22,7 @@ from benchmark.hubbench.engine.validation import canonical_json
 
 ROOT = Path(__file__).resolve().parents[1]
 DATASET = "blobfishai/arc-crm-6"
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 BASE_IMAGE = "python:3.12-slim@sha256:7a8b475003c4fe15a2cd4e55e5cfc2f3560bdc9333d624f24cdd6d4340fd7a17"
 ENGINE = "benchmark/hubbench/engine"
 MARKERS = [f"{ENGINE}/__init__.py"]
@@ -183,26 +186,52 @@ source_rows_reproduced = 0
 '''
 
 
-def agent_dockerfile():
+def archive_bytes(members):
+    """Canonical, regular-file-only Docker inputs; identity is in the filename.
+
+    The registry normalizes package mtimes. Never depend on mtimes or same-sized
+    metadata files to distinguish build contexts for different tasks/services.
+    """
+    output = io.BytesIO()
+    with tarfile.open(fileobj=output, mode="w", format=tarfile.USTAR_FORMAT) as archive:
+        for name, raw in sorted(members.items()):
+            safe_relative(name)
+            entry = tarfile.TarInfo(name)
+            entry.size, entry.mode, entry.mtime = len(raw), 0o644, 0
+            entry.uid = entry.gid = 0
+            archive.addfile(entry, io.BytesIO(raw))
+    return output.getvalue()
+
+
+def install_archive(name):
+    match = re.fullmatch(r"inputs-([a-f0-9]{64})\.tar", name)
+    if match is None:
+        raise ValueError("content-addressed build archive required")
+    return f'''COPY {name} /tmp/{name}
+RUN echo "{match[1]}  /tmp/{name}" | sha256sum --check --strict \\
+    && tar --extract --file /tmp/{name} --directory / --no-same-owner \\
+    && rm /tmp/{name}
+'''
+
+
+def agent_dockerfile(archive):
     return f'''FROM {BASE_IMAGE}
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 ARC_URL=http://world:8765
 RUN groupadd --gid 10001 agent && useradd --uid 10001 --gid 10001 --create-home --shell /bin/bash agent \\
     && mkdir -p /workspace /public /opt/arc-client /solution /tests /logs/agent /logs/verifier /logs/artifacts \\
     && chown agent:agent /workspace /logs/agent /logs/artifacts \\
     && chmod 0700 /tests && chmod 0755 /solution
-COPY client/ /opt/arc-client/
-COPY public/ /public/
-COPY tool /usr/local/bin/tool
+{install_archive(archive).rstrip()}
 RUN chmod -R a-w /opt/arc-client /public && chmod 0555 /usr/local/bin/tool
 WORKDIR /workspace
 CMD ["sleep", "infinity"]
 '''
 
 
-def world_dockerfile():
+def world_dockerfile(archive):
     return f'''FROM {BASE_IMAGE}
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
-COPY world/ /opt/arc-world/
+{install_archive(archive).rstrip()}
 RUN mkdir -p /state /run/arc-control && chmod 0700 /state /run/arc-control && chmod -R a-w /opt/arc-world
 CMD ["/usr/local/bin/python", "-I", "-S", "-B", "/opt/arc-world/world.py"]
 '''
@@ -286,6 +315,7 @@ def freeze(output: Path, *, require_clean=False):
         with path.open("xb") as handle:
             handle.write(raw)
         path.chmod(0o644)
+        os.utime(path, ns=(0, 0))
         files[relative] = {"path": relative, "bytes": len(raw), "sha256": sha(raw), "mode": "0644"}
 
     def write_json(relative, value):
@@ -316,8 +346,6 @@ def freeze(output: Path, *, require_clean=False):
         write(f"{prefix}/instruction.md", instruction)
         write(f"{prefix}/README.md", f"# {task['title']}\n\nIndependent synthetic Arc CRM workflow; not a reproduction of source rows.\n")
         write(f"{prefix}/task.toml", task_toml(task))
-        write(f"{prefix}/environment/Dockerfile", agent_dockerfile())
-        write(f"{prefix}/environment/Dockerfile.world", world_dockerfile())
         write(f"{prefix}/environment/docker-compose.yaml", COMPOSE)
         write(f"{prefix}/environment/tool", '#!/bin/sh\nexec /usr/local/bin/python -I -S -B /opt/arc-client/client.py "$@"\n')
         for name in ["client.py", "boundary.py"]:
@@ -358,12 +386,6 @@ FAMILY = Family(**json.loads((ROOT / "family.json").read_text()), schema_sql=(RO
             for original in [*MARKERS, *[f"{ENGINE}/{name}" for name in engine_files]]:
                 copy(f"{runtime}/{original}", original)
         copy(f"{prefix}/tests/verify.py", "arc_release/verify.py")
-        write(f"{prefix}/tests/Dockerfile", f'''FROM {BASE_IMAGE}
-COPY . /tests/
-RUN chmod -R a-w /tests && chmod 0700 /tests && chmod 0500 /tests/test.sh
-WORKDIR /tests
-CMD ["sleep", "infinity"]
-''')
         write(f"{prefix}/tests/docker-compose.yaml", '''services:
   main:
     network_mode: none
@@ -384,6 +406,36 @@ exec /usr/local/bin/python -I -S -B /tests/verify.py --bundle /export --isolatio
         for directory in ["environment/public", "environment/world", "tests"]:
             copy(f"{prefix}/{directory}/ENGINE-NOTICE", "benchmark/hubbench/NOTICE")
             copy(f"{prefix}/{directory}/LICENSE", "LICENSE")
+        # Keep inspectable projections, but build only from content-addressed
+        # closures. In particular, the main archive has no private world inputs.
+        def archive(context, mappings):
+            members = {}
+            for original, destination in mappings:
+                source_path = output / prefix / original
+                paths = sorted(source_path.rglob("*")) if source_path.is_dir() else [source_path]
+                for path in paths:
+                    if path.is_file():
+                        target = Path(destination) / path.relative_to(source_path) if source_path.is_dir() else Path(destination)
+                        if target.as_posix() in members:
+                            raise ValueError("duplicate Docker archive member")
+                        members[target.as_posix()] = path.read_bytes()
+            raw = archive_bytes(members)
+            name = f"inputs-{sha(raw)}.tar"
+            write(f"{prefix}/{context}/{name}", raw)
+            return name
+
+        agent_inputs = archive("environment", [("environment/client", "opt/arc-client"),
+                                                ("environment/public", "public"), ("environment/tool", "usr/local/bin/tool")])
+        world_inputs = archive("environment", [("environment/world", "opt/arc-world")])
+        verifier_inputs = archive("tests", [("tests", "tests")])
+        write(f"{prefix}/environment/Dockerfile", agent_dockerfile(agent_inputs))
+        write(f"{prefix}/environment/Dockerfile.world", world_dockerfile(world_inputs))
+        write(f"{prefix}/tests/Dockerfile", f'''FROM {BASE_IMAGE}
+{install_archive(verifier_inputs).rstrip()}
+RUN chmod -R a-w /tests && chmod 0700 /tests && chmod 0500 /tests/test.sh
+WORKDIR /tests
+CMD ["sleep", "infinity"]
+''')
         task_digest, members = content_hash(output / prefix)
         references.append({"name": f"blobfishai/{task_id}", "digest": task_digest, "files": len(members)})
         write_json(f"tasks/{task_id}/task.json", public)
@@ -458,7 +510,8 @@ quota. No runtime installation or paid model call is required for these oracles.
 Default Harbor cleanup removes only its trial containers, networks and volumes.
 
 The `environment/` build context includes world seed state, but the agent image
-copies only `client/` and `public/`. Do not mount the entire checkout or package
+extracts only its content-addressed client/public archive. Every image verifies
+its archive SHA256 before extraction. Do not mount the entire checkout or package
 into a model container. `solution/` is oracle-only; `tests/` builds the separate
 grading container. After stopping main, Harbor collects a serialized snapshot
 from the world sidecar and destroys the agent environment before grading. Host
@@ -487,6 +540,9 @@ not a license claim about linked upstream repositories. See `ENGINE-NOTICE`.
 def verify_freeze(output: Path):
     output = Path(output).absolute()
     manifest = json.loads((output / "manifest.json").read_text())
+    version = manifest.get("version", "")
+    if manifest.get("dataset") != DATASET or re.fullmatch(r"0\.1\.[0-9]+", version) is None:
+        raise ValueError("unsupported frozen dataset identity")
     entries = manifest["files"]
     expected = {entry["path"] for entry in entries} | {"manifest.json"}
     if len(expected) != len(entries) + 1:
@@ -506,7 +562,7 @@ def verify_freeze(output: Path):
     if [reference["name"] for reference in references] != expected_names:
         raise ValueError("incorrect six-task membership")
     dataset = tomllib.loads((output / "harbor/dataset.toml").read_text())
-    if dataset["dataset"]["name"] != DATASET or dataset["dataset"]["version"] != VERSION:
+    if dataset["dataset"]["name"] != DATASET or dataset["dataset"]["version"] != version:
         raise ValueError("wrong dataset identity")
     if dataset["tasks"] != [{"name": reference["name"], "digest": reference["digest"]} for reference in references]:
         raise ValueError("dataset task membership/digests differ")
@@ -516,7 +572,7 @@ def verify_freeze(output: Path):
         config = tomllib.loads((task / "task.toml").read_text())
         if actual_digest != reference["digest"] or len(members) != reference["files"]:
             raise ValueError("Harbor task content changed")
-        if config["task"]["name"] != reference["name"] or config["task"]["version"] != VERSION:
+        if config["task"]["name"] != reference["name"] or config["task"]["version"] != version:
             raise ValueError("Harbor task identity changed")
     return manifest
 

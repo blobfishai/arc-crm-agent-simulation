@@ -118,6 +118,15 @@ def test_complete_canonical_fixture_is_admitted_but_not_a_release(candidate):
             admit(frozen, job)
 
 
+def test_historical_receipt_uses_the_bound_freeze_version(candidate, monkeypatch):
+    from arc_release import build
+
+    frozen, job = candidate
+    version = json.loads((frozen / "manifest.json").read_text())["version"]
+    monkeypatch.setattr(build, "VERSION", "0.1.99")
+    assert admit(frozen, job, allow_dirty=True)["version"] == version
+
+
 @pytest.mark.parametrize(("relative", "keys", "value"), [
     ("result.json", ["stats", "n_completed_trials"], 5),
     ("result.json", ["stats", "n_errored_trials"], 1),
