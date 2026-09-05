@@ -20,6 +20,10 @@ def check_package(package, kind, digest, version, *, tag=TAG, require_latest=Tru
     require(package.get("org", {}).get("name") == "blobfishai", "wrong package organization")
     require(version.get("content_hash") == digest and version.get("yanked_at") is None, "wrong or yanked version")
     require(tag in version.get("tags", []) and (not require_latest or "latest" in version["tags"]), "requested public tags did not resolve")
+    # Harbor filters by org/name but deliberately omits name from this response.
+    # Bind the resolved version to that exact queried package by its foreign key.
+    require(isinstance(package.get("id"), str) and bool(package["id"])
+            and version.get("package_id") == package["id"], "resolved version belongs to a different package")
 
 
 def registry_identifier(version):
@@ -48,7 +52,6 @@ def validate_task(package, version, task, reference, *, tag=TAG, require_latest=
     from harbor.models.task.config import TaskConfig
 
     check_package(package, "task", reference["digest"], version, tag=tag, require_latest=require_latest)
-    require(package.get("name") == reference["name"].split("/")[1], "wrong task package name")
     config = TaskConfig.model_validate_toml((task / "task.toml").read_text()).model_dump(mode="json")
     require(version.get("config") == config, "remote task config differs from qualified package")
     for key in ["description", "authors", "keywords"]:
@@ -70,7 +73,6 @@ def validate_dataset(package, version, root, *, tag=TAG, require_latest=True):
     require(client_digest == digest_dataset(tomllib.loads((root / "dataset.toml").read_text())), "dataset hashing disagrees with Harbor client")
     digest = registry_identifier(version)
     check_package(package, "dataset", digest, version, tag=tag, require_latest=require_latest)
-    require(package.get("name") == DATASET.split("/")[1], "wrong dataset package name")
     require(version.get("description") == manifest.dataset.description, "wrong dataset description")
     require(version.get("authors") == [author.model_dump(mode="json") for author in manifest.dataset.authors], "wrong dataset authors")
     require(version.get("readme") == (root / "README.md").read_text(), "wrong dataset README")

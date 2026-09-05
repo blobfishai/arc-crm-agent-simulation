@@ -41,14 +41,24 @@ def test_duplicate_registry_tags_fail_closed():
 
 
 def test_old_tag_validation_can_omit_latest_but_not_its_version_tag():
-    package = {"type": "task", "visibility": "public", "org": {"name": "blobfishai"}}
+    package = {"id": "package-identity", "type": "task", "visibility": "public", "org": {"name": "blobfishai"}}
     digest = "sha256:" + "a" * 64
-    version = {"content_hash": digest, "tags": ["v0.1.0"]}
+    version = {"package_id": package["id"], "content_hash": digest, "tags": ["v0.1.0"]}
     registry.check_package(package, "task", digest, version, tag="v0.1.0", require_latest=False)
     with pytest.raises(ValueError, match="tags"):
         registry.check_package(package, "task", digest, version, tag="v0.1.0")
     with pytest.raises(ValueError, match="tags"):
         registry.check_package(package, "task", digest, version, require_latest=False)
+
+
+@pytest.mark.parametrize("wrong", [None, "another-package"])
+def test_version_is_bound_to_queried_package_without_a_name_field(wrong):
+    package = {"id": "exact-package", "type": "task", "visibility": "public", "org": {"name": "blobfishai"}}
+    digest = "sha256:" + "a" * 64
+    version = {"package_id": "exact-package", "content_hash": digest, "tags": [TAG, "latest"]}
+    registry.check_package(package, "task", digest, version)
+    with pytest.raises(ValueError, match="different package"):
+        registry.check_package(package, "task", digest, version | {"package_id": wrong})
 
 
 def test_incomplete_previous_release_inputs_rejected(tmp_path):
