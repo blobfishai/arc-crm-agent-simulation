@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import tomllib
 from pathlib import Path
@@ -189,8 +190,11 @@ def prepare_hf(frozen, local_job, registry_job, harbor, registry_receipt, output
     require(release["frozen_manifest_sha256"] == frozen_digest == identity.get("frozen_manifest_sha256"), "wrong publication freeze")
     require(release["source"] == manifest["source"] and release["tasks"] == manifest["tasks"], "publication source/tasks differ")
     require(read_json(harbor / "local-oracle-receipt.json") == public_receipt(local), "publication local receipt differs")
-    dataset_digest = digest_dataset(tomllib.loads((harbor / "dataset.toml").read_text()))
-    require(identity.get("dataset") == DATASET and identity.get("digest") == dataset_digest, "registry identity differs")
+    client_digest = digest_dataset(tomllib.loads((harbor / "dataset.toml").read_text()))
+    dataset_digest = identity.get("digest", "")
+    require(identity.get("dataset") == DATASET and re.fullmatch(r"sha256:[a-f0-9]{64}", dataset_digest), "registry identity differs")
+    require(identity.get("client_manifest_digest") == client_digest, "registry client manifest differs")
+    require(identity.get("client_digest_matches_registry") is (client_digest == dataset_digest), "inaccurate registry/client hash disclosure")
     require(identity.get("exact_identity") is True and identity.get("tasks") == manifest["tasks"], "registry task identity missing")
     require(identity.get("publication_manifest_sha256") == sha((harbor / "publication-manifest.json").read_bytes()), "wrong registry wrapper")
     require(registry["dataset_reference"]["ref"] == dataset_digest, "registry run used different dataset")

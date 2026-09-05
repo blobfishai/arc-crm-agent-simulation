@@ -40,3 +40,21 @@ dataset card describes qualification available at publication time; later
 registry-run and HF-object receipts are separate documents, never retroactive
 changes to that digest. Six workflows are partial Arc-inspired coverage, not
 reproductions of 1,200 source rows or adaptations of the full dataset catalog.
+
+## Registry identifier is separate from client content hashing
+
+The first Arc publication returned registry identifier `sha256:4d3737ff3fb16fc8f9b4ec54f75c19021435973fd624ad27ee54e88e459173db`,
+while Harbor 0.21.0's client manifest algorithm computed `sha256:9a003b64f3ed10e090f3ae77a7bd9fa6a1dcff44061cc468af81a108d8a1ae75`.
+All six task names/digests and all five dataset file paths/sizes/SHA256s match.
+The server SQL is not in the inspected public source; its cause is not established.
+Do not describe the registry identifier as a locally recomputed content hash.
+
+The receipt preserves both values and an explicit mismatch flag. Admission still
+requires every task config, instruction, README, metadata and file; all dataset
+members and metadata; public non-yanked tags; and byte-identical metadata from a
+second resolution by the immutable registry identifier. The all-six registry
+execution separately verifies downloaded package digests and regrades snapshots.
+No remote content or tag is modified to conceal a client/registry discrepancy.
+
+Primary client source: [manifest algorithm](https://github.com/harbor-framework/harbor/blob/5c364a538e0af19eb58a53fdb895d7c0f974cef5/src/harbor/models/dataset/manifest.py)
+and [publisher RPC usage](https://github.com/harbor-framework/harbor/blob/5c364a538e0af19eb58a53fdb895d7c0f974cef5/src/harbor/publisher/publisher.py).
