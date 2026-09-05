@@ -12,7 +12,7 @@ from arc_release.build import DATASET, json_bytes, sha, verify_freeze
 from arc_release.receipts import admit
 from publication import bundle
 from publication.hf import verify_objects
-from publication.registry import check_files, check_package
+from publication.registry import check_files, check_package, registry_identifier
 
 
 @pytest.fixture
@@ -156,6 +156,16 @@ def test_registry_moved_missing_tag_or_yank_rejected(key, value):
         check_package(package, "task", "sha256:" + "a" * 64, version)
 
 
+@pytest.mark.parametrize("value", ["latest", "v0.1.0", "a" * 64, "sha256:" + "g" * 64, "sha256:" + "a" * 63])
+def test_registry_identifier_requires_exact_immutable_ref(value):
+    with pytest.raises(ValueError, match="invalid registry dataset identifier"):
+        registry_identifier({"content_hash": value})
+
+
+def test_registry_identifier_is_distinct_from_the_local_manifest_hash():
+    assert registry_identifier({"content_hash": "sha256:" + "a" * 64}) == "sha256:" + "a" * 64
+
+
 @pytest.mark.parametrize("mutation", ["digest", "size", "duplicate", "extra", "missing", "storage"])
 def test_registry_object_identity_rejected(mutation):
     expected = [{"path": "release.json", "sha256": "a" * 64, "bytes": 3}]
@@ -193,7 +203,8 @@ def test_complete_hf_wrapper_contains_flat_preview_and_both_admitted_jobs(wrappe
     frozen, local, harbor, result = wrapper
     registry = tmp_path / "registry-job"
     shutil.copytree(local, registry)
-    descriptor = {"name": DATASET, "ref": result["digest"]}
+    registry_digest = "sha256:" + "a" * 64
+    descriptor = {"name": DATASET, "ref": registry_digest}
     config = json.loads((registry / "config.json").read_text())
     config["datasets"] = [descriptor]
     (registry / "config.json").write_bytes(json_bytes(config))
@@ -214,7 +225,8 @@ def test_complete_hf_wrapper_contains_flat_preview_and_both_admitted_jobs(wrappe
     (registry / "lock.json").write_bytes(json_bytes(job_lock))
     manifest = verify_freeze(frozen)
     identity = {
-        "dataset": DATASET, "digest": result["digest"], "tasks": manifest["tasks"], "exact_identity": True,
+        "dataset": DATASET, "digest": registry_digest, "client_manifest_digest": result["digest"],
+        "client_digest_matches_registry": False, "tasks": manifest["tasks"], "exact_identity": True,
         "frozen_manifest_sha256": sha((frozen / "manifest.json").read_bytes()),
         "publication_manifest_sha256": sha((harbor / "publication-manifest.json").read_bytes()),
     }
@@ -231,6 +243,7 @@ def test_complete_hf_wrapper_contains_flat_preview_and_both_admitted_jobs(wrappe
     assert all((output / row["task_path"]).is_file() and (output / row["assets_path"]).is_dir() for row in rows)
     assert len(bundle.inventory(output / "evidence")) == 132
     assert result["files"] == len(bundle.inventory(output))
+    assert result["registry_digest"] == registry_digest
     identity["frozen_manifest_sha256"] = "0" * 64
     identity_path.write_bytes(json_bytes(identity))
     with pytest.raises(ValueError, match="wrong publication freeze"):

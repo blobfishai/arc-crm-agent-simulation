@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import re
 import tomllib
 from pathlib import Path
 
@@ -19,6 +20,19 @@ def check_package(package, kind, digest, version):
     require(package.get("org", {}).get("name") == "blobfishai", "wrong package organization")
     require(version.get("content_hash") == digest and version.get("yanked_at") is None, "wrong or yanked version")
     require(TAG in version.get("tags", []) and "latest" in version["tags"], "requested public tags did not resolve")
+
+
+def registry_identifier(version):
+    """Registry identifier, NOT an independently reproduced content hash.
+
+    Harbor 0.21.0 sends members to publish_dataset_version and accepts its
+    returned identifier. The deployed formula is not public and differs from
+    DatasetManifest.compute_content_hash for this release. Member SHA256s and
+    exact metadata must still be independently verified before admission.
+    """
+    digest = version.get("content_hash", "")
+    require(re.fullmatch(r"sha256:[a-f0-9]{64}", digest), "invalid registry dataset identifier")
+    return digest
 
 
 def check_files(rows, expected, *, dataset=False):
@@ -51,8 +65,9 @@ def validate_dataset(package, version, root):
     from harbor.models.dataset.manifest import DatasetManifest
 
     manifest = DatasetManifest.from_toml_file(root / "dataset.toml")
-    digest = "sha256:" + manifest.compute_content_hash()
-    require(digest == digest_dataset(tomllib.loads((root / "dataset.toml").read_text())), "dataset hashing disagrees with Harbor")
+    client_digest = "sha256:" + manifest.compute_content_hash()
+    require(client_digest == digest_dataset(tomllib.loads((root / "dataset.toml").read_text())), "dataset hashing disagrees with Harbor client")
+    digest = registry_identifier(version)
     check_package(package, "dataset", digest, version)
     require(version.get("description") == manifest.dataset.description, "wrong dataset description")
     require(version.get("authors") == [author.model_dump(mode="json") for author in manifest.dataset.authors], "wrong dataset authors")
@@ -87,7 +102,7 @@ async def run(frozen, local_job, root, *, publish=False):
     descriptor = tomllib.loads((root / "dataset.toml").read_text())
     require(descriptor["dataset"]["name"] == DATASET, "unexpected publication namespace")
     require(descriptor["tasks"] == [{"name": ref["name"], "digest": ref["digest"]} for ref in manifest["tasks"]], "unexpected publication task references")
-    digest = digest_dataset(descriptor)
+    client_digest = digest_dataset(descriptor)
     db, existing = RegistryDB(), {}
     # Preflight every target before the first mutation. Auth errors are not absence.
     for name, kind in [(ref["name"], "task") for ref in manifest["tasks"]] + [(DATASET, "dataset")]:
@@ -115,18 +130,23 @@ async def run(frozen, local_job, root, *, publish=False):
         p, v = await resolve(db, ref["name"], ref["digest"])
         validate_task(p, v, task, ref)
         print(json.dumps({"verified_task": ref["name"], "digest": ref["digest"]}), flush=True)
+    published_identifier = None
     if publish and not existing[DATASET]:
         result = await publisher.publish_dataset(root, tags={TAG}, visibility="public", promote_tasks=True)
-        require("sha256:" + result.content_hash.removeprefix("sha256:") == digest, "publisher dataset digest differs")
+        published_identifier = "sha256:" + result.content_hash.removeprefix("sha256:")
     package, version = await resolve(db, DATASET, dataset=True)
-    validate_dataset(package, version, root)
+    digest = validate_dataset(package, version, root)
+    require(published_identifier is None or published_identifier == digest, "publisher returned different registry identity")
     p, v = await resolve(db, DATASET, digest, dataset=True)
-    validate_dataset(p, v, root)
+    require(validate_dataset(p, v, root) == digest and p == package and v == version, "immutable registry resolution differs from tag")
     verify_bundle(root)
     verify_freeze(frozen)
     return {
         "schema_version": 1, "dataset": DATASET, "digest": digest, "tag": TAG,
         "revision": version["revision"], "visibility": package["visibility"], "exact_identity": True,
+        "client_manifest_digest": client_digest, "client_digest_matches_registry": client_digest == digest,
+        "registry_digest_semantics": "Opaque registry-assigned version identifier; not a locally reproduced content commitment.",
+        "identity_basis": "Every task config/name/digest and dataset file path/size/SHA256/storage path independently verified; tag and immutable resolutions identical.",
         "frozen_manifest_sha256": sha((frozen / "manifest.json").read_bytes()),
         "publication_manifest_sha256": sha((root / "publication-manifest.json").read_bytes()),
         "tasks": manifest["tasks"], "task_objects": verified,
