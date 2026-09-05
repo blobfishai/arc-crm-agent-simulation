@@ -138,6 +138,7 @@ in the separate HubBench benchmark. See LICENSE and ENGINE-NOTICE in `frozen/`.
 def prepare_harbor(frozen, local_job, output):
     frozen, output = Path(frozen).resolve(strict=True), Path(output).resolve()
     manifest = verify_freeze(frozen)
+    require(manifest["version"] == VERSION, "publication builder version differs from freeze")
     receipt = admit(frozen, local_job)
     require(not output.exists() and not output.is_relative_to(frozen), "new external publication directory required")
     output.mkdir(parents=True)
@@ -182,6 +183,7 @@ def copy_evidence(frozen, job, receipt, output):
 def prepare_hf(frozen, local_job, registry_job, harbor, registry_receipt, output):
     frozen, harbor, output = Path(frozen).resolve(strict=True), Path(harbor).resolve(strict=True), Path(output).resolve()
     manifest = verify_freeze(frozen)
+    require(manifest["version"] == VERSION, "publication builder version differs from freeze")
     verify_bundle(harbor)
     local, registry = admit(frozen, local_job), admit(frozen, registry_job, registry=True)
     identity = read_json(Path(registry_receipt))

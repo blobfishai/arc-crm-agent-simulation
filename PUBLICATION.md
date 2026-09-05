@@ -14,6 +14,14 @@ an existing freeze or wrapper. The commands below require new output paths.
    metadata, file membership/sizes/digests and immutable resolutions. Existing
    names must already match exactly; unexpected tags/content are never moved.
    The dataset publisher API avoids the CLI's manifest-rewriting sync step.
+   A next-patch upgrade additionally requires `--previous-frozen OLD_FREEZE
+   --previous-publication OLD_WRAPPER --previous-receipt OLD_REGISTRY_IDENTITY.json`.
+   All seven old tags, immutable references and exact objects are checked before
+   any write. `latest` must point to that known release or the exact new release
+   when resuming partial publication. The old version tag is never moved; all
+   seven old tags are checked again after publishing. Targets are rechecked
+   immediately before each mutation, but Harbor has no cross-package atomic CAS:
+   do not run concurrent publishers against these names.
 4. Run **all six**, with no filters/retries, using the returned dataset digest:
    `harbor run -d blobfishai/arc-crm-6@sha256:DIGEST -a oracle -e docker -n 1 -k 1 -r 0 -o JOBS --job-name NEW_JOB`.
    Admit with `python3.12 -m arc_release.receipts FROZEN REGISTRY_JOB --registry --output NEW_RECEIPT.json`.
@@ -40,6 +48,13 @@ dataset card describes qualification available at publication time; later
 registry-run and HF-object receipts are separate documents, never retroactive
 changes to that digest. Six workflows are partial Arc-inspired coverage, not
 reproductions of 1,200 source rows or adaptations of the full dataset catalog.
+
+Package 0.1.0's registry execution failed; its successful local-only receipt is
+not qualification for 0.1.1. See [the incident](diagnostics/registry-v0.1.0.md).
+Version 0.1.1 changes only packaging/build inputs, not the vendored 0.1.0
+authoring contract. New freezes use epoch mtimes like Harbor archives; each
+agent/world/verifier image verifies its distinct SHA256-named input archive.
+Both all-six Docker jobs must be rerun on the new, clean package bytes.
 
 ## Registry identifier is separate from client content hashing
 

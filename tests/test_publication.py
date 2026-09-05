@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from test_receipts import saved_fixture  # noqa: F401 — shared synthetic job fixture
 
-from arc_release.build import DATASET, json_bytes, sha, verify_freeze
+from arc_release.build import DATASET, VERSION, json_bytes, sha, verify_freeze
 from arc_release.receipts import admit
 from publication import bundle
 from publication.hf import verify_objects
@@ -145,13 +145,13 @@ def test_hf_mutable_or_invalid_commit_rejected(hf_objects, commit):
 def test_registry_wrong_namespace_type_visibility_rejected(key, value):
     package = {"type": "task", "visibility": "public", "org": {"name": "blobfishai"}, key: value}
     with pytest.raises(ValueError):
-        check_package(package, "task", "sha256:" + "a" * 64, {"content_hash": "sha256:" + "a" * 64, "tags": ["latest", "v0.1.0"]})
+        check_package(package, "task", "sha256:" + "a" * 64, {"content_hash": "sha256:" + "a" * 64, "tags": ["latest", bundle.TAG]})
 
 
-@pytest.mark.parametrize("key,value", [("content_hash", "sha256:" + "b" * 64), ("yanked_at", "today"), ("tags", ["latest"]), ("tags", ["v0.1.0"])])
+@pytest.mark.parametrize("key,value", [("content_hash", "sha256:" + "b" * 64), ("yanked_at", "today"), ("tags", ["latest"]), ("tags", [bundle.TAG])])
 def test_registry_moved_missing_tag_or_yank_rejected(key, value):
     package = {"type": "task", "visibility": "public", "org": {"name": "blobfishai"}}
-    version = {"content_hash": "sha256:" + "a" * 64, "tags": ["latest", "v0.1.0"], key: value}
+    version = {"content_hash": "sha256:" + "a" * 64, "tags": ["latest", bundle.TAG], key: value}
     with pytest.raises(ValueError):
         check_package(package, "task", "sha256:" + "a" * 64, version)
 
@@ -213,7 +213,7 @@ def test_complete_hf_wrapper_contains_flat_preview_and_both_admitted_jobs(wrappe
         lock = json.loads((directory / "lock.json").read_text())
         task_id = lock["task"]["name"]
         digest = lock["task"]["digest"]
-        lock["task"] = {"name": f"blobfishai/{task_id}", "type": "package", "source": DATASET, "version": "0.1.0", "digest": digest}
+        lock["task"] = {"name": f"blobfishai/{task_id}", "type": "package", "source": DATASET, "version": VERSION, "digest": digest}
         (directory / "lock.json").write_bytes(json_bytes(lock))
         locks.append(lock)
         trial = json.loads((directory / "result.json").read_text())
